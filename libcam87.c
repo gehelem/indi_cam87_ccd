@@ -52,7 +52,8 @@ int  mCameraState = 0;     //Variable-state camera  0 - ready 1 - longexp 2 - re
 int  ExposureTimer;      //exposure timer
 //      co: posl;                           // Variable for the second stream (image reading)
 static uint16_t bufim[3000][2000];       // Buffer array image for operations
-static uint16_t bufim2[30000][20000];  int  mYn,mdeltY;       //start reading and the number of the rows
+//static uint16_t bufim2[30000][20000];
+int  mYn,mdeltY;       //start reading and the number of the rows
 //int  mXn,mdeltX;      //start reading and number of the columns
 uint8_t zatv;
 int kolbyte;
@@ -301,8 +302,8 @@ void posExecute ( void *arg ) // Array itself actually reading through ADBUS por
     byteExpected = kolbyte;
     uint16_t x,y;
     struct ftdi_transfer_control *tc_read;
-    usleep(500*1000);
-    byteCnt=ftdi_read_data ( CAM8A,FT_In_Buffer,kolbyte );
+    //usleep(500*1000);
+    byteCnt=ftdi_read_data_modified ( CAM8A,FT_In_Buffer,kolbyte );
 
     if ( byteCnt!=byteExpected ) {
         errorReadFlag=true;
@@ -310,16 +311,26 @@ void posExecute ( void *arg ) // Array itself actually reading through ADBUS por
         if ( !errorWriteFlag ) {
             ftdi_tciflush( CAM8A);
             ftdi_tcoflush( CAM8A);
+            for ( y=0; y < 2000; y++ ) {
+                for ( x=0; x <3000; x++ ) {
+                    bufim[x][y]= 0;
+                }
+            }
         }
     } else {
+        fprintf ( stderr,"--posExecute : read OK %i %i\n",byteCnt,byteExpected );
 
         if ( mBin == 0 ) {
             for ( y=0; y < mdeltY; y++ ) {
                 for ( x=0; x < 1500; x++ ) {
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+4+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+4+y*6000 ) +1] );
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6000 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6000 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6000 ) +1] );
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 ) *1]= 256* ( FT_In_Buffer[8*x+0+y*12000] )+ FT_In_Buffer[8*x+1+y*12000];
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= 256* ( FT_In_Buffer[8*x+2+y*12000] )+ FT_In_Buffer[8*x+3+y*12000];
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= 256* ( FT_In_Buffer[8*x+4+y*12000] )+ FT_In_Buffer[8*x+5+y*12000];
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= 256* ( FT_In_Buffer[8*x+6+y*12000] )+ FT_In_Buffer[8*x+7+y*12000];
+//                  rawimg[2 * x + 0 + (2 * y + 0) * Width] = 256 * bufbyte[8 * (x + x0) + 0 + y * 12000] + bufbyte[8 * (x + x0) + 1 + y * 12000];
+//                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6000 ) +1] );
+//                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6000 ) +1] );
+//                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6000 ) +1] );
                 }
 
             }
@@ -339,6 +350,8 @@ void posExecute ( void *arg ) // Array itself actually reading through ADBUS por
             }
         }
     }
+    ftdi_tciflush( CAM8A);
+    ftdi_tcoflush( CAM8A);
     // discard image if sensorClearing was required (Bias frame before exposure)
     if ( sensorClear ) {
         imageReady = false;
@@ -522,20 +535,21 @@ bool cameraConnect()
             FT_flag=false;
         }
     }*/
-    if ( FT_flag ) {
+    /*if ( FT_flag ) {
         if (!cameraSetBaudrateB ( BRB ) ) {
             fprintf ( stderr,"libftdi error set baudrate interface B\n" );
             FT_flag=false;
         }
-    }
+    }*/
+    ftdi_result=ftdi_set_baudrate ( CAM8B,20000 );
 
     if ( FT_flag ) {
         if ( ftdi_set_latency_timer ( CAM8A,CAM87_LATENCYA ) <0 ) fprintf ( stderr,"libftdi error set latency interface A\n" );
         if ( ftdi_set_latency_timer ( CAM8B,CAM87_LATENCYB ) <0 ) fprintf ( stderr,"libftdi error set latency interface B\n" );;
 
 //timeouts
-        CAM8A->usb_read_timeout=CAM87_TIMERA;
-        CAM8B->usb_read_timeout=CAM87_TIMERB;
+        CAM8A->usb_read_timeout=4000;
+        CAM8B->usb_read_timeout=100;
         CAM8A->usb_write_timeout=100;
         CAM8B->usb_write_timeout=100;
         //ftdi_read_data_set_chunksize(CAM8A,65536);

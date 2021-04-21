@@ -250,43 +250,14 @@ bool Cam87CCD::Connect()
     //cameraSetBaudrate(80);
     if ( cameraConnect() )
     {
-        cameraSetBaudrateA ( BRA );
+        //cameraSetBaudrateA ( BRA );
         cameraSetBaudrateB ( BRB );
         usleep ( 200*1000 );
         LOG_INFO ( "Cam87 connected successfully" );
         cameraSetOffset ( -20 );
         cameraSetGain ( 0 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 1 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 2 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 5 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 10 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 0 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 1 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 2 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 5 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
-        cameraSetGain ( 10 );
-        usleep ( 20*1000 );
-        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
         ;
-        cameraSetReadingTime ( 10 );
+        //cameraSetReadingTime ( 10 );
         return true;
     }
     else
@@ -393,7 +364,10 @@ bool Cam87CCD::initProperties()
     uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_BAYER | CCD_HAS_COOLER;
     //uint32_t cap = CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_COOLER;
     SetCCDCapability ( cap );
-    IUSaveText ( &BayerT[2], "RGGB" );
+    //IUSaveText ( &BayerT[2], "RGGB" );
+    //IUSaveText ( &BayerT[2], "BGGR" );
+    //IUSaveText ( &BayerT[2], "GBRG" );
+    IUSaveText ( &BayerT[2], "GRBG" );
     // Add Debug, Simulator, and Configuration controls
     addAuxControls();
 
@@ -501,7 +475,7 @@ bool Cam87CCD::StartExposure ( float duration )
     PrimaryCCD.setExposureDuration ( duration );
     //cameraStartExposure(1,0,0,3000,2000, duration,true);
     //int r = cameraStartExposure ( PrimaryCCD.getBinX(),PrimaryCCD.getSubX(),PrimaryCCD.getSubY(),PrimaryCCD.getSubW(),PrimaryCCD.getSubH(), duration, true );    //int r = cameraStartExposure(1,0,0,3000,2000, 0.4, true);
-    int r = cameraStartExposure ( PrimaryCCD.getBinX()-1,PrimaryCCD.getSubX(),PrimaryCCD.getSubY(),PrimaryCCD.getSubW(),PrimaryCCD.getSubH(), duration, true );   //int r = cameraStartExposure(1,0,0,3000,2000, 0.4, true);
+    int r = cameraStartExposure(1,0,0,3000,2000, duration, true);
     gettimeofday ( &ExpStart,NULL );
 
 
@@ -676,9 +650,9 @@ void Cam87CCD::grabImage()
             {
                 uint16_t pix = cameraGetImageXY ( i,j );
                 uint8_t hibyte = ( pix & 0xff00 ) >> 8;
-                uint8_t lobyte = ( pix & 0xff );
-                image[2*i+  j*width] = hibyte;
-                image[2*i+1+j*width] = lobyte;
+                uint8_t lobyte = ( pix & 0x00ff );
+                image[2*i+  j*width] = lobyte;
+                image[2*i+1+j*width] = hibyte;
             };
     }
     else
@@ -689,8 +663,8 @@ void Cam87CCD::grabImage()
                 uint16_t pix = cameraGetImageXY ( 2*i,2*j );
                 uint8_t hibyte = ( pix & 0xff00 ) >> 8;
                 uint8_t lobyte = ( pix & 0xff );
-                image[2*i+  j*width] = hibyte;
-                image[2*i+1+j*width] = lobyte;
+                image[2*i+  j*width] = lobyte;
+                image[2*i+1+j*width] = hibyte;
             };
     };
 
