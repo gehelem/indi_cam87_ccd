@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.4.7)
+cmake_minimum_required(VERSION 3.0)
 PROJECT(indi_cam87_ccd C CXX)
 SET ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread" )
 if(COMMAND cmake_policy)
@@ -18,7 +18,7 @@ add_library(cam87 libcam87.c)
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
-find_package(INDI COMPONENTS client driver REQUIRED)
+find_package(INDI COMPONENTS driver client REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package ( LibFTDI1 NO_MODULE REQUIRED )
 include ( ${LIBFTDI_USE_FILE} )
@@ -39,11 +39,12 @@ if (CFITSIO_FOUND)
 
 set(cam87ccd_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/cam87_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/libcam87.c
 )
 
 add_executable(indi_cam87_ccd ${cam87ccd_SRCS})
 
-target_link_libraries(indi_cam87_ccd indidriver cam87 ${INDI_LIBRARIES} ${LIBFTDI_LIBRARIES}  ${CFITSIO_LIBRARIES} m ${ZLIB_LIBRARY} )
+target_link_libraries(indi_cam87_ccd  ${INDI_LIBRARIES} ${LIBFTDI_LIBRARIES}  ${CFITSIO_LIBRARIES} m ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS indi_cam87_ccd RUNTIME DESTINATION bin)
 

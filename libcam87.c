@@ -52,7 +52,7 @@ int  mCameraState = 0;     //Variable-state camera  0 - ready 1 - longexp 2 - re
 int  ExposureTimer;      //exposure timer
 //      co: posl;                           // Variable for the second stream (image reading)
 static uint16_t bufim[3000][2000];       // Buffer array image for operations
-int  mYn,mdeltY;       //start reading and the number of the rows
+static uint16_t bufim2[30000][20000];  int  mYn,mdeltY;       //start reading and the number of the rows
 //int  mXn,mdeltX;      //start reading and number of the columns
 uint8_t zatv;
 int kolbyte;
@@ -63,8 +63,8 @@ double durat;
 int ftdi_result;
 //FT_In_Buffer  : Array[0..FT_In_Buffer_Index] of Word;
 //FT_Out_Buffer : Array[0..FT_Out_Buffer_Index] of Byte;
-static uint8_t FT_In_Buffer[26000000];
-static uint8_t FT_Out_Buffer[26000000];
+static uint8_t FT_In_Buffer[260000000];
+static uint8_t FT_Out_Buffer[260000000];
 int  FT_Current_Baud;
 bool FT_OP_flag;
 bool FT_flag;
@@ -185,25 +185,30 @@ void sspi ( void )
     int i,j;
     uint8_t b;
     uint16_t n;
-
-    n = 100;
-    memset ( FT_Out_Buffer,portfirst,n );
+    static uint8_t bufi[128];
+    n = 128;
+    memset ( bufi,portfirst,n );
     for ( j = 0; j <= 2; j++ ) {
         b=siin[j];
         for ( i = 0; i <= 7; i++ ) {
-            FT_Out_Buffer[2*i+1+16*j]+=0x20;
+            bufi[2*i+1+16*j]+=0x20;
             if ( ( ( b & 0x80 ) ==0x80 ) ) {
-                FT_Out_Buffer[2*i+16*j]+=0x80;
-                FT_Out_Buffer[2*i+1+16*j]+=0x80;
+                bufi[2*i+0+16*j]+=0x80;
+                bufi[2*i+1+16*j]+=0x80;
             }
-            b=b*2;
+            //b=b*2;
+            b = (uint8_t)(b << 1);
         }
     }
     if ( !errorWriteFlag ) {
-        if ( ftdi_write_data ( CAM8B, FT_Out_Buffer, n ) < 0 ) {
+        if ( ftdi_write_data ( CAM8B, bufi, n ) < 0 ) {
             fprintf ( stderr,"write failed on channel B)\n" );
             errorWriteFlag = true;
         }
+        //fprintf ( stderr,"--ftdi_write_data : ");
+        //for (int k=0;k<128;k++) fprintf ( stderr,"%X",bufi[k]);
+        //fprintf ( stderr,"--ftdi_write_data end\n");
+
     }
 }
 
@@ -211,28 +216,34 @@ void sspo ( void )
 {
     fprintf(stderr,"--sspo\n");
     int i;
-    uint16_t b,n;
+    int16_t b,n;
     uint16_t byteCnt, byteExpected;
     uint16_t buf;
+    static uint8_t bufo[80];
 
-    n=100;
+
+    n=80;
     byteCnt = 0;
     byteExpected = n;
     if ( !errorWriteFlag ) {
-        byteCnt = ftdi_read_data ( CAM8B,FT_In_Buffer,n );
+        byteCnt = ftdi_read_data ( CAM8B,bufo,n );
+        //fprintf ( stderr,"--ftdi_read_data : ");
+        //for (int k=0;k<80;k++) fprintf ( stderr,"%X",bufo[k]);
+        //fprintf ( stderr,"--ftdi_read_data end\n");
+
     }
     if ( byteCnt != byteExpected ) {
+       fprintf ( stderr,"--sspo : error read byte %i %i\n",byteCnt,byteExpected );
         errorReadFlag = true;
     }
-    //fprintf ( stderr,"--sspo byteCnt (%d)\n",byteCnt);
+    fprintf ( stderr,"--sspo byteCnt (%d)\n",byteCnt);
     b=0;
     for ( i = 0; i <= 15; i++ ) {
-        b=b*2;
-        buf= ( 256*FT_In_Buffer[2* ( i+1+8 )]+FT_In_Buffer[2* ( i+1+8 ) +1] );
-        if ( ( ( buf & 0x40 ) != 0x00 ) ) b++;
+        b = (uint16_t)(b << 1);
+        if ((bufo[2 * i + 16 + 2] & 0x40) != 0) b++;
     }
     siout=b;
-    //fprintf ( stderr,"--sspo siout (%04X)\n",siout);
+    fprintf ( stderr,"--sspo siout (%04X)\n",siout);
 
 }
 
@@ -251,6 +262,24 @@ void Spi_comm ( uint8_t comm, uint16_t param )
     sspo();
     //usleep ( 20*1000 );
 }
+void reset ( void )
+{
+    fprintf(stderr,"--reset\n");
+
+    static uint8_t buf[6000];
+    memset ( buf,portfirst,6000 );
+    for (int i = 0; i < 2000; i++) buf[i + 2000] = 0x01;
+
+    ftdi_tciflush( CAM8B);
+    ftdi_tcoflush( CAM8B);
+
+    if ( !errorWriteFlag ) {
+        if ( ftdi_write_data ( CAM8B, buf, 6000 ) < 0 ) {
+            fprintf ( stderr,"write failed on channel B)\n" );
+            errorWriteFlag = true;
+        }
+    }
+}
 
 uint16_t swap ( uint16_t x )
 {
@@ -264,19 +293,20 @@ uint16_t swap ( uint16_t x )
 /*Contraption FT2232HL converting the read buffer to the buffer array image
 �� due to the nature AD9822 read the high byte first, then low, and vice versa in delphi.
 �� Use the type integer32, instead word16 due to overflow in subsequent operations*/
-void *posExecute ( void *arg ) // Array itself actually reading through ADBUS port
+void posExecute ( void *arg ) // Array itself actually reading through ADBUS port
 {
     fprintf ( stderr,"--posExecute\n" );
     uint16_t byteCnt, byteExpected;
     byteCnt = 0;
     byteExpected = kolbyte;
     uint16_t x,y;
-    if ( !errorWriteFlag ) {
-        byteCnt=ftdi_read_data ( CAM8A,FT_In_Buffer,kolbyte );
-    }
+    struct ftdi_transfer_control *tc_read;
+    usleep(500*1000);
+    byteCnt=ftdi_read_data ( CAM8A,FT_In_Buffer,kolbyte );
 
     if ( byteCnt!=byteExpected ) {
         errorReadFlag=true;
+        fprintf ( stderr,"--posExecute : error read byte %i %i\n",byteCnt,byteExpected );
         if ( !errorWriteFlag ) {
             ftdi_tciflush( CAM8A);
             ftdi_tcoflush( CAM8A);
@@ -284,12 +314,12 @@ void *posExecute ( void *arg ) // Array itself actually reading through ADBUS po
     } else {
 
         if ( mBin == 0 ) {
-            for ( y=0; y <= mdeltY-1; y++ ) {
-                for ( x=0; x <= 1499; x++ ) {
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+4+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+4+y*6004 ) +1] );
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6004 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6004 ) +1] );
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6004 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6004 ) +1] );
+            for ( y=0; y < mdeltY; y++ ) {
+                for ( x=0; x < 1500; x++ ) {
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+4+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+4+y*6000 ) +1] );
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6000 ) +1] );
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6000 ) +1] );
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6000 ) +1] );
                 }
 
             }
@@ -319,7 +349,8 @@ void *posExecute ( void *arg ) // Array itself actually reading through ADBUS po
     cameraState=cameraIdle;
 
     ( void ) arg;
-    pthread_exit ( NULL );
+    //pthread_exit ( NULL );
+    return;
 }
 
 /*Filling the output buffer array for transmission and placing byte val at the address adr-chip AD9822.
@@ -409,33 +440,39 @@ void readframe ( void )
 
     cameraState = cameraReading;
     ftdi_tciflush ( CAM8A );
-    //ftdi_tcoflush ( CAM8B );
+    ftdi_tcoflush ( CAM8A );
     //comread();
-
-    pthread_t t1;
-    pthread_create ( &t1, NULL, posExecute, NULL );
     Spi_comm ( 0x1B,0 ); //$ffff
+    void *arg;
+    posExecute(arg);
+    //pthread_t t1;
+    //pthread_create ( &t1, NULL, posExecute, NULL );
     //pthread_detach ( t1 );
-    pthread_join ( t1,NULL );
+    //pthread_join ( t1,NULL );
     //fprintf ( stderr,"--readframe -- Done !\n" );
 }
 
 /*Set camera gain, return bool result*/
 bool cameraSetGain ( int val )
 {
-    AD9822 ( 3,val );
+    fprintf ( stderr,"---------------------------cameraSetGain %i\n",val );
+    Spi_comm(0xE0, val);
+    //AD9822 ( 3,val );
     return true;
 }
 
 /*Set camera offset, return bool result*/
 bool cameraSetOffset ( int val )
 {
+    fprintf ( stderr,"---------------------------cameraSetOffset %i\n",val );
     int x;
 
-    x=abs ( 2*val );
+    x=abs ( val );
     if ( val < 0 )  x=x+256;
-    AD9822 ( 6,x );
+    Spi_comm(0xE1, (uint16_t)x);
+    //AD9822 ( 6,x );
     return true;
+
 }
 
 /*Connect camera, return bool result}
@@ -479,56 +516,50 @@ bool cameraConnect()
 
 
 // Baudrate
-    if ( FT_flag ) FT_flag=cameraSetBaudrateA ( BRA );
-    if ( FT_flag ) FT_flag=cameraSetBaudrateB ( BRB );
+    /*if ( FT_flag ) {
+        if (!cameraSetBaudrateA ( BRA ) ) {
+            fprintf ( stderr,"libftdi error set baudrate interface A\n" );
+            FT_flag=false;
+        }
+    }*/
+    if ( FT_flag ) {
+        if (!cameraSetBaudrateB ( BRB ) ) {
+            fprintf ( stderr,"libftdi error set baudrate interface B\n" );
+            FT_flag=false;
+        }
+    }
 
     if ( FT_flag ) {
         if ( ftdi_set_latency_timer ( CAM8A,CAM87_LATENCYA ) <0 ) fprintf ( stderr,"libftdi error set latency interface A\n" );
         if ( ftdi_set_latency_timer ( CAM8B,CAM87_LATENCYB ) <0 ) fprintf ( stderr,"libftdi error set latency interface B\n" );;
 
 //timeouts
-        fprintf(stderr,"1\n");
         CAM8A->usb_read_timeout=CAM87_TIMERA;
-        fprintf(stderr,"2\n");
         CAM8B->usb_read_timeout=CAM87_TIMERB;
-        fprintf(stderr,"3\n");
         CAM8A->usb_write_timeout=100;
-        fprintf(stderr,"4\n");
         CAM8B->usb_write_timeout=100;
-        fprintf(stderr,"5\n");
         //ftdi_read_data_set_chunksize(CAM8A,65536);
         ftdi_read_data_set_chunksize ( CAM8A, 1<<14 );
         fprintf ( stderr,"libftdi BRA=%d BRB=%d TA=%d TB=%d CSA=%d \n",CAM8A->baudrate,CAM8B->baudrate,CAM8A->usb_read_timeout,CAM8B->usb_write_timeout,CAM8A->readbuffer_chunksize );
 
 
 //Purge
+
         if ( ftdi_tciflush ( CAM8A ) <0 ) fprintf ( stderr,"libftdi error purge RX interface A\n" );
         if ( ftdi_tcoflush ( CAM8A ) <0 ) fprintf ( stderr,"libftdi error purge TX interface A\n" );
         if ( ftdi_tciflush ( CAM8B ) <0 ) fprintf ( stderr,"libftdi error purge RX interface B\n" );
         if ( ftdi_tcoflush ( CAM8B ) <0 ) fprintf ( stderr,"libftdi error purge TX interface B\n" );
-        fprintf(stderr,"6\n");
-        adress =0;
-
-        AD9822 ( 0,0xD8 );
-        fprintf(stderr,"7\n");
-        AD9822 ( 1,0xA0 );
-        fprintf(stderr,"8\n");
-
-        cameraSetGain ( 0 );      // Set a gain. that is not full of ADC
-        fprintf(stderr,"9\n");
-
-        cameraSetOffset ( 0 );
-        fprintf(stderr,"a\n");
-
-        //usleep ( 100*1000 );
-        //send init command
-        Spi_comm ( 0xdb,0 );
+        reset();
+        usleep ( 200*1000 );
+        //cameraSetGain ( 0 );      // Set a gain. that is not full of ADC
+        //cameraSetOffset ( 0 );
         fprintf(stderr,"b\n");
 
         //usleep ( 100*1000 );
 
         // Remove the 2 bytes that have arisen after the reset
         if ( ftdi_tciflush ( CAM8A ) <0 ) fprintf ( stderr,"libftdi error purge RX interface A\n" );
+        if ( ftdi_tcoflush ( CAM8A ) <0 ) fprintf ( stderr,"libftdi error purge TX interface A\n" );
         mBin=0;
     }
     isConnected = FT_flag;
@@ -571,7 +602,7 @@ void *ExposureTimerTick ( void *arg )
     uint32_t dd;
     dd = ( durat*1000 ) *1000;
     //usleep ( dd );
-    //fprintf ( stderr,"--ExposureTimerTick : Tick !\n" );
+    fprintf ( stderr,"--ExposureTimerTick : Tick !\n" );
     //Spi_comm ( 0xcb,0 ); //clear frame
     //usleep ( 1000*100 );
     readframe();
@@ -599,7 +630,7 @@ void cameraSensorClearFull ( void )
 
     // use 2x2 binning to increase the reading speed
     // the image will be deleted anyway
-    kolbyte=mdeltY*3008;
+    kolbyte=mdeltY*3000;
     //bining
     Spi_comm ( 0x8b,1 );
     mBin=1;
@@ -625,9 +656,9 @@ void cameraSensorClearFull ( void )
 int cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, double Duration, bool light )
 {
     fprintf ( stderr,"--cameraStartExposure bin %d x %d y %d w %d h %d s %f l %d\n",bin,StartX,StartY,NumX,NumY,Duration,light );
-    if ( sensorClear ) cameraSensorClearFull;
+    //if ( sensorClear ) cameraSensorClearFull;
     uint8_t d0,d1;
-    int expoz;
+    uint16_t expoz;
 
     errorReadFlag = false;
     imageReady = false;
@@ -639,37 +670,36 @@ int cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, doubl
 //     fprintf ( stderr,"--cameraStartExposure A1\n" );
 
     if ( bin==2 ) {
-        kolbyte=mdeltY*3008;
+        kolbyte=mdeltY*3000;
         Spi_comm ( 0x8B,1 ); //bining
         mBin=1;
     } else {
-        kolbyte=mdeltY*12008;
+        kolbyte=mdeltY*12000;
         Spi_comm ( 0x8B,0 ); //no bining
         mBin=0;
     }
 //     fprintf ( stderr,"--cameraStartExposure A2\n" );
     expoz=Duration*1000;
     durat=Duration;
-    if ( expoz > 1000 ) expoz=1001; // what ?
     Spi_comm ( 0x6B,expoz );
 //     fprintf ( stderr,"--cameraStartExposure A3\n" );
 
     //camera exposing
     cameraState = cameraExposing;
-    if ( Duration > 1.0 ) {
+    if ( expoz > 500 ) {
 //          fprintf ( stderr,"--cameraStartExposure B1\n" );
-        Spi_comm ( 0x2B,0 ); //shift3
+        //Spi_comm ( 0x2B,0 ); //shift3
         //usleep ( 40*1000 );
-        Spi_comm ( 0xCB,0 ); //clear frame
+        //Spi_comm ( 0xCB,0 ); //clear frame
         //usleep ( 180*1000 ); //for time of clear frame
         Spi_comm ( 0x3B,0 ); //off 15v
         eexp= ( 1000* ( Duration-1.2 ) );
-        pthread_create ( &te, NULL, ExposureTimerTick, NULL );
-        pthread_detach ( te );
+        //pthread_create ( &te, NULL, ExposureTimerTick, NULL );
+        //pthread_detach ( te );
     } else {
 //          fprintf ( stderr,"--cameraStartExposure C1\n" );
-        eexp=0;
-        readframe();
+        //eexp=0;
+        //readframe();
     }
     return true;
 }
@@ -726,6 +756,15 @@ float CameraGetTemp ( void )
     //fprintf ( stderr,"--CameraGetTemp %d \n",siout );
     return ( ( float ) ( siout )-1280 ) /10;
 }
+int cameraGetGain ( void )
+{
+
+    fprintf ( stderr,"---------------------------cameraGetGain \n");
+    Spi_comm ( 0xBC,0 );
+    fprintf ( stderr,"---------------------------cameraGetGain result %i \n",siout );
+    return (uint16_t)siout;
+}
+
 
 float CameraGetTempDHT ( void )
 {
@@ -900,7 +939,7 @@ bool cameraSetCoolingMaximumPowerPercentage ( int val )
 
 bool cameraSetReadingTime ( int val )
 {
-    Spi_comm ( 0xEB,val );
+    //Spi_comm ( 0xEB,val );
     return true;
 }
 

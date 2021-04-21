@@ -1,5 +1,5 @@
-#ifndef Cam87CCD_H
-#define Cam87CCD_H
+
+#pragma once
 
 /*
    INDI Developers Manual
@@ -27,10 +27,10 @@
 
 class Cam87CCD : public INDI::CCD {
 public:
-    Cam87CCD();
-
+    Cam87CCD() ;
     bool ISNewNumber ( const char *dev, const char *name, double values[], char *names[], int n );
     bool ISNewSwitch ( const char *dev, const char *name, ISState *states, char *names[], int n );
+
     IPState GuideNorth(unsigned int) {}
     IPState GuideSouth(unsigned int) {}
     IPState GuideEast(unsigned int) {}
@@ -110,6 +110,5 @@ private:
     double targetTemperature;
     int   timerID;
 
-};
 
-#endif // Cam87CCD_H
+};

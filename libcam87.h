@@ -24,20 +24,21 @@
 #ifndef __LIBCAM87_H__
 #define __LIBCAM87_H__
 
-#define BRA 20
-#define BRB 5
-#define CAM87_LATENCYA  20
-#define CAM87_LATENCYB  20
-#define CAM87_TIMERA    6000
+#define BRA 200
+#define BRB 20
+#define CAM87_LATENCYA  1
+#define CAM87_LATENCYB  1
+#define CAM87_TIMERA    4000
 #define CAM87_TIMERB    100
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+void readframe ( void );
 bool cameraConnect ( void );
 bool cameraDisconnect ( void );
 bool cameraSetGain ( int val );
+int  cameraGetGain ( void);
 bool cameraSetOffset ( int val );
 int  cameraStartExposure ( int bin,int StartX,int StartY,int NumX,int NumY, double Duration, bool light );
 bool cameraStopExposure ( void );

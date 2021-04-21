@@ -22,12 +22,13 @@
 
 #include <sys/time.h>
 #include <memory>
-#include <math.h>
+#include <cmath>
 #include <unistd.h>
 #include "cam87_ccd.h"
 #include "libcam87.h"
 
-#define POLLMS           300        /* Polling interval 500 ms */
+
+//#define POLLMS           300        /* Polling interval 500 ms */
 #define MAX_CCD_TEMP      45		/* Max CCD temperature */
 #define MIN_CCD_TEMP	 -55		/* Min CCD temperature */
 #define TEMP_THRESHOLD  0.25		/* Differential temperature threshold (C)*/
@@ -42,27 +43,32 @@ std::unique_ptr<Cam87CCD> simpleCCD ( new Cam87CCD() );
 
 void ISGetProperties ( const char *dev )
 {
+    fprintf ( stderr,"*** ISGetProperties\n" );
     simpleCCD->ISGetProperties ( dev );
 }
 
 void ISNewSwitch ( const char *dev, const char *name, ISState *states, char *names[], int num )
 {
+    fprintf ( stderr,"*** ISNewSwitch\n" );
     simpleCCD->ISNewSwitch ( dev, name, states, names, num );
 
 }
 
 void ISNewText (	const char *dev, const char *name, char *texts[], char *names[], int num )
 {
+    fprintf ( stderr,"*** ISNewText\n" );
     simpleCCD->ISNewText ( dev, name, texts, names, num );
 }
 
 void ISNewNumber ( const char *dev, const char *name, double values[], char *names[], int num )
 {
+    fprintf ( stderr,"*** ISNewNumber\n" );
     simpleCCD->ISNewNumber ( dev, name, values, names, num );
 }
 
 void ISNewBLOB ( const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n )
 {
+    fprintf ( stderr,"*** ISNewBLOB\n" );
     INDI_UNUSED ( dev );
     INDI_UNUSED ( name );
     INDI_UNUSED ( sizes );
@@ -75,11 +81,14 @@ void ISNewBLOB ( const char *dev, const char *name, int sizes[], int blobsizes[]
 
 void ISSnoopDevice ( XMLEle *root )
 {
+    fprintf ( stderr,"*** ISSnoopDevice\n" );
     simpleCCD->ISSnoopDevice ( root );
 }
 
 Cam87CCD::Cam87CCD()
 {
+    fprintf ( stderr,"*** new cam87 driver instance \n" );
+
     InExposure = false;
 }
 
@@ -89,6 +98,7 @@ Cam87CCD::Cam87CCD()
 bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
                              double values[], char *names[], int n )
 {
+    fprintf ( stderr,"DRV newnumber %s\n",name );
     if ( !strcmp ( dev, getDeviceName() ) )
     {
         if ( !strcmp ( name, GainNP.name ) )
@@ -107,7 +117,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             OffsetNP.s = IPS_OK;
             IDSetNumber ( &OffsetNP, NULL );
             cameraSetOffset ( OffsetN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set offset = %d", ( int ) OffsetN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set offset = %d", ( int ) OffsetN[0].value );
             return true;
         }
 
@@ -117,7 +127,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             BaudrateNP.s = IPS_OK;
             IDSetNumber ( &BaudrateNP, NULL );
             cameraSetBaudrate ( BaudrateN[0].value );
-            //IDMessage ( getDeviceName(), "Cam87 set baudrate = %d", ( int ) BaudrateN[0].value );
+            //IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set baudrate = %d", ( int ) BaudrateN[0].value );
             return true;
           }*/
 
@@ -127,7 +137,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             BaudrateANP.s = IPS_OK;
             IDSetNumber ( &BaudrateANP, NULL );
             cameraSetBaudrateA ( BaudrateAN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set baudrate A = %d", ( int ) BaudrateAN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set baudrate A = %d", ( int ) BaudrateAN[0].value );
             return true;
         }
 
@@ -137,7 +147,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             BaudrateBNP.s = IPS_OK;
             IDSetNumber ( &BaudrateBNP, NULL );
             cameraSetBaudrateB ( BaudrateBN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set baudrate B = %d", ( int ) BaudrateBN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set baudrate B = %d", ( int ) BaudrateBN[0].value );
             return true;
         }
         if ( !strcmp ( name, LibftditimerANP.name ) )
@@ -147,7 +157,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             IDSetNumber ( &LibftditimerANP, NULL );
             cameraSetLibftdiTimerAR ( LibftditimerAN[0].value );
             cameraSetLibftdiTimerAW ( LibftditimerAN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set libftdi timerA = %d", ( int ) LibftditimerAN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set libftdi timerA = %d", ( int ) LibftditimerAN[0].value );
             return true;
         }
 
@@ -157,7 +167,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             LibftdilatencyANP.s = IPS_OK;
             IDSetNumber ( &LibftdilatencyANP, NULL );
             cameraSetLibftdiLatA ( LibftdilatencyAN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set libftdi latencyA = %d", ( int ) LibftdilatencyAN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set libftdi latencyA = %d", ( int ) LibftdilatencyAN[0].value );
             return true;
         }
         if ( !strcmp ( name, LibftditimerBNP.name ) )
@@ -167,7 +177,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             IDSetNumber ( &LibftditimerBNP, NULL );
             cameraSetLibftdiTimerBR ( LibftditimerBN[0].value );
             cameraSetLibftdiTimerBW ( LibftditimerBN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set libftdi timerB = %d", ( int ) LibftditimerBN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set libftdi timerB = %d", ( int ) LibftditimerBN[0].value );
             return true;
         }
 
@@ -177,7 +187,7 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
             LibftdilatencyBNP.s = IPS_OK;
             IDSetNumber ( &LibftdilatencyBNP, NULL );
             cameraSetLibftdiLatA ( LibftdilatencyBN[0].value );
-            IDMessage ( getDeviceName(), "Cam87 set libftdi latencyA = %d", ( int ) LibftdilatencyBN[0].value );
+            IDMessage ( INDI::CCD::getDeviceName(), "Cam87 set libftdi latencyA = %d", ( int ) LibftdilatencyBN[0].value );
             return true;
         }
 
@@ -194,6 +204,8 @@ bool Cam87CCD::ISNewNumber ( const char *dev, const char *name,
 bool Cam87CCD::ISNewSwitch ( const char *dev, const char *name,
                              ISState *states, char *names[], int n )
 {
+    fprintf ( stderr,"DRV newswitch %s\n",name );
+    INDI::CCD::ISNewSwitch(dev,name,states,names,n);
     if ( strcmp ( dev,getDeviceName() ) ==0 )
     {
 
@@ -233,39 +245,57 @@ bool Cam87CCD::Connect()
     fprintf ( stderr,"DRV Connect\n" );
 
     // Let's set a timer that checks teleCCDs status every POLLMS milliseconds.
-    SetTimer ( POLLMS );
+    SetTimer(getCurrentPollingPeriod());
+
     //cameraSetBaudrate(80);
     if ( cameraConnect() )
     {
-        fprintf ( stderr,"TOTO 0\n" );
         cameraSetBaudrateA ( BRA );
-        fprintf ( stderr,"TOTO 1\n" );
         cameraSetBaudrateB ( BRB );
-        fprintf ( stderr,"TOTO 2\n" );
-        //usleep ( 500*1000 );
-        fprintf ( stderr,"TOTO 3\n" );
+        usleep ( 200*1000 );
+        LOG_INFO ( "Cam87 connected successfully" );
         cameraSetOffset ( -20 );
-        fprintf ( stderr,"TOTO 4\n" );
         cameraSetGain ( 0 );
-        fprintf ( stderr,"TOTO 5\n" );
-        IDMessage ( getDeviceName(), "Cam87 connected successfully!\n" );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 1 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 2 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 5 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 10 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 0 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 1 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 2 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 5 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
+        cameraSetGain ( 10 );
+        usleep ( 20*1000 );
+        LOGF_INFO ( "Cam87 gain = %u",cameraGetGain() );
         ;
         cameraSetReadingTime ( 10 );
-        fprintf ( stderr,"TOTO 6\n" );
-        //cameraSetCoolerDuringReading ( true );
         return true;
     }
     else
     {
-        IDMessage ( getDeviceName(), "Cam87 connection error\n" );
+        LOG_INFO ( "Cam87 connection error" );
         return false;
 
     }
 
-    //CameraSetTemp(0);
-    //CameraCoolingOn();
-
-    return true;
 }
 
 /**************************************************************************************
@@ -276,7 +306,7 @@ bool Cam87CCD::Disconnect()
 
     cameraDisconnect();
     return true;
-    IDMessage ( getDeviceName(), "Cam87 disconnected successfully!\n" );
+    IDMessage ( INDI::CCD::getDeviceName(), "Cam87 disconnected successfully!\n" );
 }
 
 
@@ -305,55 +335,55 @@ bool Cam87CCD::initProperties()
 
     /* Add Gain number property (gs) */
     IUFillNumber ( GainN, "GAIN", "Gain", "%g", 0, 63, 1, 0 );
-    IUFillNumberVector ( &GainNP, GainN, 1, getDeviceName(),"GAIN",
+    IUFillNumberVector ( &GainNP, GainN, 1, INDI::CCD::getDeviceName(),"GAIN",
                          "Gain", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Offset number property (gs) */
     IUFillNumber ( OffsetN, "OFFSET", "Offset", "%g", -127, 127, 1, -20 );
-    IUFillNumberVector ( &OffsetNP, OffsetN, 1, getDeviceName(),"OFFSET",
+    IUFillNumberVector ( &OffsetNP, OffsetN, 1, INDI::CCD::getDeviceName(),"OFFSET",
                          "Offset", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Baudrate number property (gs) */
 //  IUFillNumber ( BaudrateN, "BAUDRATE", "Baudrate", "%g", 5, 150, 5, 20 );
-//  IUFillNumberVector ( &BaudrateNP, BaudrateN, 1, getDeviceName(),"BAUDRATE",
+//  IUFillNumberVector ( &BaudrateNP, BaudrateN, 1, INDI::CCD::getDeviceName(),"BAUDRATE",
 //                       "Baudrate", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Baudrate A number property (gs) */
     IUFillNumber ( BaudrateAN, "BAUDRATEA", "BaudrateA", "%g", 5, 150, 5, 20 );
-    IUFillNumberVector ( &BaudrateANP, BaudrateAN, 1, getDeviceName(),"BAUDRATEA",
+    IUFillNumberVector ( &BaudrateANP, BaudrateAN, 1, INDI::CCD::getDeviceName(),"BAUDRATEA",
                          "BaudrateA", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Baudrate B number property (gs) */
     IUFillNumber ( BaudrateBN, "BAUDRATEB", "BaudrateB", "%g", 5, 150, 5, 5 );
-    IUFillNumberVector ( &BaudrateBNP, BaudrateBN, 1, getDeviceName(),"BAUDRATEB",
+    IUFillNumberVector ( &BaudrateBNP, BaudrateBN, 1, INDI::CCD::getDeviceName(),"BAUDRATEB",
                          "BaudrateB", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Latency number property (gs) */
     IUFillNumber ( LibftdilatencyAN, "LATENCYA", "LatencyA", "%g", 1, 50, 1, CAM87_LATENCYA );
-    IUFillNumberVector ( &LibftdilatencyANP, LibftdilatencyAN, 1, getDeviceName(),"LATENCYA",
+    IUFillNumberVector ( &LibftdilatencyANP, LibftdilatencyAN, 1, INDI::CCD::getDeviceName(),"LATENCYA",
                          "LatencyA", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add timers number property (gs) */
     IUFillNumber ( LibftditimerAN, "TIMERA", "TimerA", "%g", 10, 20000, 10, CAM87_TIMERA );
-    IUFillNumberVector ( &LibftditimerANP, LibftditimerAN, 1, getDeviceName(),"TIMERA",
+    IUFillNumberVector ( &LibftditimerANP, LibftditimerAN, 1, INDI::CCD::getDeviceName(),"TIMERA",
                          "TimerA", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Latency number property (gs) */
     IUFillNumber ( LibftdilatencyBN, "LATENCYB", "LatencyB", "%g", 1, 50, 1, CAM87_LATENCYB );
-    IUFillNumberVector ( &LibftdilatencyBNP, LibftdilatencyBN, 1, getDeviceName(),"LATENCYB",
+    IUFillNumberVector ( &LibftdilatencyBNP, LibftdilatencyBN, 1, INDI::CCD::getDeviceName(),"LATENCYB",
                          "LatencyB", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add timers number property (gs) */
     IUFillNumber ( LibftditimerBN, "TIMERB", "TimerB", "%g",  10, 20000, 10, CAM87_TIMERB );
-    IUFillNumberVector ( &LibftditimerBNP, LibftditimerBN, 1, getDeviceName(),"TIMERB",
+    IUFillNumberVector ( &LibftditimerBNP, LibftditimerBN, 1, INDI::CCD::getDeviceName(),"TIMERB",
                          "TimerB", LIBFTDI_TAB, IP_RW, 0, IPS_IDLE );
 
     IUFillSwitch ( &CoolerS[0], "COOLER_ON", "ON", ISS_OFF );
     IUFillSwitch ( &CoolerS[1], "COOLER_OFF", "OFF", ISS_ON );
-    IUFillSwitchVector ( &CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", COOLER_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE );
+    IUFillSwitchVector ( &CoolerSP, CoolerS, 2, INDI::CCD::getDeviceName(), "CCD_COOLER", "Cooler", COOLER_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE );
 
     IUFillNumber ( &CoolerN[0], "CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0 );
-    IUFillNumberVector ( &CoolerNP, CoolerN, 1, getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", COOLER_TAB, IP_RO, 60, IPS_IDLE );
+    IUFillNumberVector ( &CoolerNP, CoolerN, 1, INDI::CCD::getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", COOLER_TAB, IP_RO, 60, IPS_IDLE );
 
 
 
@@ -387,18 +417,19 @@ bool Cam87CCD::updateProperties()
         setupParams();
 
         // Start the timer
-        SetTimer ( POLLMS );
-        defineNumber ( &GainNP );
-        defineNumber ( &OffsetNP );
+        setCurrentPollingPeriod(300);
+        SetTimer(getCurrentPollingPeriod());
+        defineProperty ( &GainNP );
+        defineProperty ( &OffsetNP );
         //defineNumber ( &BaudrateNP );
-        defineNumber ( &BaudrateANP );
-        defineNumber ( &BaudrateBNP );
-        defineNumber ( &LibftditimerANP );
-        defineNumber ( &LibftdilatencyANP );
-        defineNumber ( &LibftditimerBNP );
-        defineNumber ( &LibftdilatencyBNP );
-        defineSwitch ( &CoolerSP );
-        defineNumber ( &CoolerNP );
+        defineProperty ( &BaudrateANP );
+        defineProperty ( &BaudrateBNP );
+        defineProperty ( &LibftditimerANP );
+        defineProperty ( &LibftdilatencyANP );
+        defineProperty ( &LibftditimerBNP );
+        defineProperty ( &LibftdilatencyBNP );
+        defineProperty ( &CoolerSP );
+        defineProperty ( &CoolerNP );
     }
     else
     {
@@ -465,7 +496,7 @@ bool Cam87CCD::StartExposure ( float duration )
 
 
     ExposureRequest=duration;
-    IDMessage ( getDeviceName(), "Start exposure %g",duration );
+    LOGF_INFO ( "Start exposure %g",duration );
     // Since we have only have one CCD with one chip, we set the exposure duration of the primary CCD
     PrimaryCCD.setExposureDuration ( duration );
     //cameraStartExposure(1,0,0,3000,2000, duration,true);
@@ -533,7 +564,6 @@ float Cam87CCD::CalcTimeLeft()
 ***************************************************************************************/
 void Cam87CCD::TimerHit()
 {
-    fprintf ( stderr,"DRV TimerHit\n" );
     long timeleft;
     if ( isConnected() == false )
         return;  //  No need to reset timer if we are not connected anymore
@@ -547,7 +577,7 @@ void Cam87CCD::TimerHit()
         if ( timeleft < 0.1 )
         {
             /* We're done exposing */
-            IDMessage ( getDeviceName(), "Exposure done, downloading image..." );
+            IDMessage ( INDI::CCD::getDeviceName(), "Exposure done, downloading image..." );
 
             // Set exposure left to zero
             PrimaryCCD.setExposureLeft ( 0 );
@@ -587,7 +617,7 @@ void Cam87CCD::TimerHit()
         dewpoint = b * c / ( a - c );
 
 
-        IDMessage ( getDeviceName(), "CCD %.2f/%.2f°C Ext %.2f Hum %.2f DP %.1f CoolerPower %.2f Kp %.2f - %d-%d\n" , currentCCDTemperature,settemp,tempDHT,HUM,dewpoint,coolerpower,Kp,coolerStart,coolerMax );
+        IDMessage ( INDI::CCD::getDeviceName(), "CCD %.2f/%.2f°C Ext %.2f Hum %.2f DP %.1f CoolerPower %.2f Kp %.2f - %d-%d\n" , currentCCDTemperature,settemp,tempDHT,HUM,dewpoint,coolerpower,Kp,coolerStart,coolerMax );
         TemperatureN[0].value =currentCCDTemperature;
 
     }
@@ -616,8 +646,8 @@ void Cam87CCD::TimerHit()
         break;
     }*/
 
-
-    SetTimer ( POLLMS );
+    setCurrentPollingPeriod ( 300 );
+    SetTimer(getCurrentPollingPeriod());
     return;
 }
 
@@ -632,12 +662,12 @@ void Cam87CCD::grabImage()
     int height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
     //int width = PrimaryCCD.getSubW() / PrimaryCCD.getBinX() * (PrimaryCCD.getBPP() / 8);
     //int height = PrimaryCCD.getSubH() / PrimaryCCD.getBinY() * (PrimaryCCD.getBPP() / 8);
-
-
-    IDMessage ( getDeviceName(), "grabimage width=%d height=%d BPP=%d\n", width/2, height, PrimaryCCD.getBPP() );
+    usleep(100*1000);
+    LOGF_INFO( "grabimage width=%d height=%d BPP=%d\n", width/2, height, PrimaryCCD.getBPP() );
+    readframe();
 
     // Fill buffer with random pattern
-    while ( !cameraGetImageReady() ); // waiting image
+    //while ( !cameraGetImageReady() ) LOG_INFO("waiting\n"); // waiting image
 
     if ( PrimaryCCD.getBinX() ==1 )
     {
@@ -665,7 +695,7 @@ void Cam87CCD::grabImage()
     };
 
 
-    IDMessage ( getDeviceName(), "Download complete.\n" );
+    IDMessage ( INDI::CCD::getDeviceName(), "Download complete.\n" );
 
     // Let INDI::CCD know we're done filling the image buffer
     ExposureComplete ( &PrimaryCCD );
