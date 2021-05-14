@@ -62,10 +62,7 @@ uint8_t siin[4];
 uint16_t siout;
 double durat;
 int ftdi_result;
-//FT_In_Buffer  : Array[0..FT_In_Buffer_Index] of Word;
-//FT_Out_Buffer : Array[0..FT_Out_Buffer_Index] of Byte;
 static uint8_t FT_In_Buffer[260000000];
-static uint8_t FT_Out_Buffer[260000000];
 int  FT_Current_Baud;
 bool FT_OP_flag;
 bool FT_flag;
@@ -327,26 +324,17 @@ void posExecute ( void *arg ) // Array itself actually reading through ADBUS por
                     bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= 256* ( FT_In_Buffer[8*x+2+y*12000] )+ FT_In_Buffer[8*x+3+y*12000];
                     bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= 256* ( FT_In_Buffer[8*x+4+y*12000] )+ FT_In_Buffer[8*x+5+y*12000];
                     bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= 256* ( FT_In_Buffer[8*x+6+y*12000] )+ FT_In_Buffer[8*x+7+y*12000];
-//                  rawimg[2 * x + 0 + (2 * y + 0) * Width] = 256 * bufbyte[8 * (x + x0) + 0 + y * 12000] + bufbyte[8 * (x + x0) + 1 + y * 12000];
-//                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+5+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+5+y*6000 ) +1] );
-//                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 ) *1]= ( FT_In_Buffer[2* ( 4*x+6+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+6+y*6000 ) +1] );
-//                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 ) *1]= ( FT_In_Buffer[2* ( 4*x+7+y*6000 )] ) +256* ( FT_In_Buffer[2* ( 4*x+7+y*6000 ) +1] );
                 }
 
             }
         } else {
             for ( y=0; y <= mdeltY-1; y++ ) {
-                for ( x=0; x <= 1498; x++ ) {
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1];
-                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
-                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1504 )] + 256*FT_In_Buffer[2* ( x+7+y*1504 ) +1] ;
+                for ( x=0; x < 1500; x++ ) {
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1500 )] + 256*FT_In_Buffer[2* ( x+7+y*1500 )] ;
+                    bufim[2*x+0][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1500 )] + 256*FT_In_Buffer[2* ( x+7+y*1500 )] ;
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +1 )]= FT_In_Buffer[2* ( x+7+y*1500 )] + 256*FT_In_Buffer[2* ( x+7+y*1500 )] ;
+                    bufim[2*x+1][ ( 2* ( y+mYn ) +0 )]= FT_In_Buffer[2* ( x+7+y*1500 )] + 256*FT_In_Buffer[2* ( x+7+y*1500 )] ;
                 }
-                x=1499;
-                bufim[2*x+0][ ( 2* ( y+mYn ) +0 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+0][ ( 2* ( y+mYn ) +1 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+1][ ( 2* ( y+mYn ) +1 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
-                bufim[2*x+1][ ( 2* ( y+mYn ) +0 )]=FT_In_Buffer[2* ( x+6+y*1504 )] + 256*FT_In_Buffer[2* ( x+6+y*1504 ) +1] ;
             }
         }
     }
@@ -535,13 +523,13 @@ bool cameraConnect()
             FT_flag=false;
         }
     }*/
-    /*if ( FT_flag ) {
-        if (!cameraSetBaudrateB ( BRB ) ) {
+    if ( FT_flag ) {
+        if (!cameraSetBaudrateB ( 20 ) ) {
             fprintf ( stderr,"libftdi error set baudrate interface B\n" );
             FT_flag=false;
         }
-    }*/
-    ftdi_result=ftdi_set_baudrate ( CAM8B,20000 );
+    }
+//    ftdi_result=ftdi_set_baudrate ( CAM8B,120000 );
 
     if ( FT_flag ) {
         if ( ftdi_set_latency_timer ( CAM8A,CAM87_LATENCYA ) <0 ) fprintf ( stderr,"libftdi error set latency interface A\n" );
@@ -742,7 +730,7 @@ bool CameraSetTemp ( float temp )
     uint16_t d0;
     fprintf ( stderr,"--CameraSetTemp\n" );
     fprintf ( stderr,"--target =  %.2f\n",temp );
-    d0=1280 + temp*10;
+    d0=(uint16_t)16*temp;
     Spi_comm ( 0xAB,d0 );
     return true;
 }
@@ -754,7 +742,7 @@ float cameraGetSetTemp ()
     float temp;
 
     Spi_comm ( 0xbe,0 );
-    temp = ( siout - 1280 ) / 10.0;
+    temp = siout *0.0625;
     if ( ( temp > 120 ) || ( temp < -120 ) ) {
         temp = targetTempCache;
     }
@@ -768,7 +756,7 @@ float CameraGetTemp ( void )
 
     Spi_comm ( 0xBF,0 );
     //fprintf ( stderr,"--CameraGetTemp %d \n",siout );
-    return ( ( float ) ( siout )-1280 ) /10;
+    return (( float ) ( siout )) *0.0625;
 }
 int cameraGetGain ( void )
 {
@@ -779,20 +767,6 @@ int cameraGetGain ( void )
     return (uint16_t)siout;
 }
 
-
-float CameraGetTempDHT ( void )
-{
-    Spi_comm ( 0xF1,0 );
-    //fprintf ( stderr,"--CameraGetTempDHT %d \n",siout );
-    return ( ( float ) ( siout )-1280 ) /10;
-}
-
-float CameraGetHum ( void )
-{
-    Spi_comm ( 0xF2,0 );
-    //fprintf ( stderr,"--CameraGetHUM %d \n",siout );
-    return ( ( float ) ( siout ) ) /10;
-}
 
 bool CameraCoolingOn ( void )
 {
@@ -809,22 +783,11 @@ bool CameraCoolingOff ( void )
     return true;
 }
 
-bool cameraGetCoolerOn ( void )
+uint16_t cameraGetCoolerOn ( void )
 {
-    if ( ( cameraState == cameraReading ) || ( cameraState == cameraDownload ) ) {
-        return coolerOnCache;
-    } else {
+
         Spi_comm ( 0xbd,0 );
-        if ( siout == TRUE_INV_PROT ) {
-            coolerOnCache = true;
-            return true;
-        } else if ( siout == FALSE_INV_PROT ) {
-            coolerOnCache = false;
-            return false;
-        } else {
-            return coolerOnCache;
-        }
-    }
+        return (uint16_t)siout;
 }
 
 uint16_t cameraGetImageXY ( int i,int j )
@@ -937,20 +900,6 @@ int cameraGetError()
     return res;
 }
 
-bool cameraSetCoolingStartingPowerPercentage ( int val )
-{
-    Spi_comm ( 0x0A,val );
-    CoolingStartingPowerPercentageCache = val;
-    return true;
-}
-
-bool cameraSetCoolingMaximumPowerPercentage ( int val )
-{
-    Spi_comm ( 0x1A,val );
-    CoolingMaximumPowerPercentageCache = val;
-    return true;
-}
-
 bool cameraSetReadingTime ( int val )
 {
     //Spi_comm ( 0xEB,val );
@@ -965,18 +914,9 @@ bool cameraSetCoolerDuringReading ( bool val )
 float cameraGetCoolerPower ( void )
 {
     double power;
-    if ( ( cameraState == cameraReading ) || ( cameraState == cameraDownload ) ) {
-        return coolerPowerCache;
-    } else {
-        Spi_comm ( 0xBC,0 );
-        if ( ( siout >> 8 ) == ( HIGH_MASK_PROT >> 8 ) ) {
-            power = ( siout & 0x00FF ) / 2.55;
-        } else {
-            power = coolerPowerCache;
-        };
-        coolerPowerCache = power;
-        return power;
-    };
+    Spi_comm ( 0xBA,0 );
+    power = 0.390625 * (255 - siout);
+    return power;
 }
 
 int cameraGetFirmwareVersion()
@@ -995,79 +935,3 @@ int cameraGetLLDriverVersion ()
     return softwareLLDriverVersion;
 }
 
-bool cameraSetBiasBeforeExposure ( bool val )
-{
-    sensorClear = val;
-    return true;
-}
-
-int cameraGetCoolingStartingPowerPercentage ()
-{
-    if ( ( cameraState == cameraReading ) || ( cameraState == cameraDownload ) ) {
-        return CoolingStartingPowerPercentageCache;
-    } else {
-        Spi_comm ( 0xba,0 );
-        CoolingStartingPowerPercentageCache = siout;
-        return CoolingStartingPowerPercentageCache;
-    }
-}
-
-int cameraGetCoolingMaximumPowerPercentage ()
-{
-    if ( ( cameraState == cameraReading ) || ( cameraState == cameraDownload ) ) {
-        return CoolingMaximumPowerPercentageCache;
-    } else {
-        Spi_comm ( 0xb9,0 );
-        CoolingMaximumPowerPercentageCache = siout;
-        return CoolingMaximumPowerPercentageCache;
-    }
-}
-
-bool cameraSetPIDproportionalGain ( float val )
-{
-    Spi_comm ( 0x2a, val*1000 );
-    KpCache = val;
-    return true;
-}
-
-int16_t cameraGetPIDproportionalGainLow()
-{
-    Spi_comm ( 0xb8,0 );
-    return siout;
-}
-
-int16_t cameraGetPIDproportionalGainHigh()
-{
-    Spi_comm ( 0xb7,0 );
-    return siout;
-}
-
-double cameraGetPIDproportionalGain ()
-{
-    if ( ( cameraState == cameraReading ) || ( cameraState == cameraDownload ) ) {
-        fprintf ( stderr,"cache ! %d\n",cameraState );
-
-        return KpCache;
-    } else {
-        // this is a pain, AVR compiler fails to convert float to integers correctly
-        // under some conditions.
-        // for example
-        // float x = 0.4*1000.0 equals 400.0 while
-        // float a = 0.4;
-        // float x = a * 1000.0 equals 100.0
-        // ??????
-        // we read 4-byte long byte array and convert it to a floating point
-
-        int16_t low,high;
-        low = cameraGetPIDproportionalGainLow();
-        high = cameraGetPIDproportionalGainHigh();
-        char temp[4];
-        temp[0]=low & 0xff;
-        temp[1]=low >> 8;
-        temp[2]=high & 0xff;
-        temp[3]=high >> 8;
-        KpCache = *temp;
-        //fprintf ( stderr,"KpL %d KpH %d\n",low,high );
-        return KpCache/1000;
-    }
-}

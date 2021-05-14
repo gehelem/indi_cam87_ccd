@@ -26,8 +26,8 @@
 
 #define BRA 200
 #define BRB 20
-#define CAM87_LATENCYA  1
-#define CAM87_LATENCYB  1
+#define CAM87_LATENCYA  2
+#define CAM87_LATENCYB  2
 #define CAM87_TIMERA    4000
 #define CAM87_TIMERB    100
 
@@ -65,6 +65,7 @@ bool cameraSetCoolingMaximumPowerPercentage(int val);
 float cameraGetSetTemp (void);
 bool cameraSetReadingTime(int val);
 bool cameraSetCoolerDuringReading(bool val);
+uint16_t cameraGetCoolerOn(void);
 float cameraGetCoolerPower(void);
 int  cameraGetCameraState(void);
 int cameraGetError(void);

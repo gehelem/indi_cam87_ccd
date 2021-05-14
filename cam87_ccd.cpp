@@ -32,7 +32,7 @@
 #define MAX_CCD_TEMP      45		/* Max CCD temperature */
 #define MIN_CCD_TEMP	 -55		/* Min CCD temperature */
 #define TEMP_THRESHOLD  0.25		/* Differential temperature threshold (C)*/
-#define TEMPERATURE_UPDATE_FREQ 40      /* Update every 40 POLLMS ~ 20 second */
+#define TEMPERATURE_UPDATE_FREQ 10      /* Update every 40 POLLMS ~ 20 second */
 
 /* Macro shortcut to CCD temperature value */
 #define currentCCDTemperature   TemperatureN[0].value
@@ -310,7 +310,7 @@ bool Cam87CCD::initProperties()
                          "Gain", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE );
 
     /* Add Offset number property (gs) */
-    IUFillNumber ( OffsetN, "OFFSET", "Offset", "%g", -127, 127, 1, -20 );
+    IUFillNumber ( OffsetN, "OFFSET", "Offset", "%g", -255, 255, 10, 0 );
     IUFillNumberVector ( &OffsetNP, OffsetN, 1, INDI::CCD::getDeviceName(),"OFFSET",
                          "Offset", MAIN_CONTROL_TAB, IP_RW, 0, IPS_IDLE );
 
@@ -443,7 +443,9 @@ void Cam87CCD::setupParams()
     nbuf+=512;                      //  leave a little extra at the end
     PrimaryCCD.setFrameBufferSize ( nbuf );
 
-    bool coolerOn=(cameraGetCoolerPower()>0);
+    //bool coolerOn=(cameraGetCoolerPower()>0);
+    bool coolerOn=(cameraGetCoolerOn() !=0);
+
     CoolerS[0].s = coolerOn ? ISS_ON : ISS_OFF;
     CoolerS[1].s = coolerOn ? ISS_OFF : ISS_ON;
     CoolerSP.s = IPS_OK;
@@ -456,9 +458,6 @@ void Cam87CCD::setupParams()
     TemperatureN[0].value = temperature;			/* CCD chip temperatre (degrees C) */
     IDSetNumber(&TemperatureNP, NULL);
 
-    cameraSetCoolingStartingPowerPercentage ( 100 );
-    cameraSetCoolingMaximumPowerPercentage ( 100 );
-    cameraSetPIDproportionalGain ( 0.04 );
 
 }
 
@@ -571,27 +570,17 @@ void Cam87CCD::TimerHit()
 
     // TemperatureNP is defined in INDI::CCD
     //if ((TemperatureUpdateCounter++ > TEMPERATURE_UPDATE_FREQ) && !InExposure)
-    /*if ( ( TemperatureUpdateCounter++ > TEMPERATURE_UPDATE_FREQ ) )
+    if ( ( TemperatureUpdateCounter++ > TEMPERATURE_UPDATE_FREQ ) )
     {
         TemperatureUpdateCounter = 0;
         currentCCDTemperature = CameraGetTemp();
-        float tempDHT=CameraGetTempDHT();
-        float HUM=CameraGetHum();
-        float coolerpower = cameraGetCoolerPower();
-        float Kp = cameraGetPIDproportionalGain();
-        int coolerStart = cameraGetCoolingStartingPowerPercentage();
-        int coolerMax = cameraGetCoolingMaximumPowerPercentage();
-        float settemp = cameraGetSetTemp();
+        float coolerpower = 0; //cameraGetCoolerPower();
+        float settemp = 0;  //cameraGetSetTemp();
+        uint16_t cooleron = 0;//cameraGetCoolerOn();
+        //double c = log ( HUM / 100 ) + a * tempDHT / ( b + tempDHT );
+        //dewpoint = b * c / ( a - c );
 
-        const double a = 17.27;
-        const double b = 237.7;
-        double dewpoint = 0;
-
-        double c = log ( HUM / 100 ) + a * tempDHT / ( b + tempDHT );
-        dewpoint = b * c / ( a - c );
-
-
-        IDMessage ( INDI::CCD::getDeviceName(), "CCD %.2f/%.2f°C Ext %.2f Hum %.2f DP %.1f CoolerPower %.2f Kp %.2f - %d-%d\n" , currentCCDTemperature,settemp,tempDHT,HUM,dewpoint,coolerpower,Kp,coolerStart,coolerMax );
+        LOGF_INFO (  "%s ccdtemp=%.2f°C settemp=%.2f°C CoolerPower=%.2f CoolerOn %i\n" ,INDI::CCD::getDeviceName(), currentCCDTemperature,settemp,coolerpower,cooleron);
         TemperatureN[0].value =currentCCDTemperature;
 
     }
@@ -600,7 +589,7 @@ void Cam87CCD::TimerHit()
     {
     case IPS_IDLE:
     case IPS_OK:
-        currentCCDTemperature = CameraGetTemp();
+        //currentCCDTemperature = CameraGetTemp();
         if ( fabs ( currentCCDTemperature - TemperatureN[0].value ) >= TEMP_THRESHOLD )
         {
             TemperatureN[0].value = currentCCDTemperature;
@@ -609,7 +598,7 @@ void Cam87CCD::TimerHit()
         break;
 
     case IPS_BUSY:
-        TemperatureN[0].value = CameraGetTemp();
+        //TemperatureN[0].value = CameraGetTemp();
         if (fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
             TemperatureNP.s = IPS_OK;
         IDSetNumber(&TemperatureNP, NULL);
@@ -618,7 +607,7 @@ void Cam87CCD::TimerHit()
 
     case IPS_ALERT:
         break;
-    }*/
+    }
 
     setCurrentPollingPeriod ( 300 );
     SetTimer(getCurrentPollingPeriod());
@@ -677,8 +666,6 @@ void Cam87CCD::grabImage()
 void Cam87CCD::activateCooler(bool enable)
 {
     fprintf ( stderr,"DRV activateCooler\n" );
-
-    bool coolerOn;
 
     if (enable)
     {
